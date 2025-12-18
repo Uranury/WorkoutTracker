@@ -1,4 +1,4 @@
-package http_server
+package infra
 
 import (
 	"github.com/jmoiron/sqlx"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-type APIServer struct {
+type Deps struct {
 	DBConn      *sqlx.DB
 	RedisClient *redis.Client
 	HTTPClient  *http.Client
