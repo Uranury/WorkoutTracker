@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/Uranury/WorkoutTracker/pkg/apperrors"
 	"golang.org/x/crypto/bcrypt"
+	"log/slog"
 )
 
 type Service interface {
@@ -17,11 +18,12 @@ type Service interface {
 }
 
 type service struct {
-	repo Repository
+	repo   Repository
+	logger *slog.Logger
 }
 
-func NewService(repo Repository) Service {
-	return &service{repo: repo}
+func NewService(repo Repository, logger *slog.Logger) Service {
+	return &service{repo: repo, logger: logger}
 }
 
 func (s *service) Create(ctx context.Context, request SignUpRequest) (*User, error) {

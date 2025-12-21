@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"log/slog"
 )
 
 type Repository interface {
@@ -17,11 +18,12 @@ type Repository interface {
 }
 
 type repository struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	logger *slog.Logger
 }
 
-func NewRepository(db *sqlx.DB) Repository {
-	return &repository{db: db}
+func NewRepository(db *sqlx.DB, logger *slog.Logger) Repository {
+	return &repository{db: db, logger: logger}
 }
 
 func (r *repository) Create(ctx context.Context, user *User) error {

@@ -19,7 +19,7 @@ type Deps struct {
 	Config      *config.Config
 }
 
-func New() (*Deps, func(), error) {
+func NewDeps() (*Deps, func(), error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, nil, err

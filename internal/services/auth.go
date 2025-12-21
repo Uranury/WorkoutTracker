@@ -6,12 +6,17 @@ import (
 	"time"
 )
 
-type Auth struct {
-	JWTKey []byte
+type Auth interface {
+	GenerateToken(userID int64) (string, error)
+	ValidateToken(tokenString string) (*Claims, error)
 }
 
-func NewAuth(secret string) *Auth {
-	return &Auth{JWTKey: []byte(secret)}
+type auth struct {
+	jwtKey []byte
+}
+
+func NewAuth(secret string) Auth {
+	return &auth{jwtKey: []byte(secret)}
 }
 
 type Claims struct {
@@ -19,7 +24,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func (s *Auth) GenerateJWT(userID int64) (string, error) {
+func (s *auth) GenerateToken(userID int64) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -27,16 +32,16 @@ func (s *Auth) GenerateJWT(userID int64) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(s.JWTKey)
+	return token.SignedString(s.jwtKey)
 }
 
-func (s *Auth) VerifyJWT(tokenString string) (*Claims, error) {
+func (s *auth) ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return s.JWTKey, nil
+		return s.jwtKey, nil
 	})
 	if err != nil || !token.Valid {
 		if err != nil {

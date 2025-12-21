@@ -15,8 +15,8 @@ type Handler struct {
 	authService services.Auth
 }
 
-func NewHandler(service Service, authService *services.Auth) *Handler {
-	return &Handler{service: service, authService: *authService}
+func NewHandler(service Service, authService services.Auth) *Handler {
+	return &Handler{service: service, authService: authService}
 }
 
 type SignUpRequest struct {
@@ -68,7 +68,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.GenerateJWT(user.ID)
+	token, err := h.authService.GenerateToken(user.ID)
 	if err != nil {
 		apperrors.GenHTTPError(c, http.StatusInternalServerError, err.Error(), nil)
 		return

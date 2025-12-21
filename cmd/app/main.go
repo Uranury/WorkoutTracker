@@ -2,42 +2,40 @@ package main
 
 import (
 	"context"
+	"github.com/Uranury/WorkoutTracker/internal/http_server"
+	"github.com/Uranury/WorkoutTracker/internal/infra"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/Uranury/WorkoutTracker/internal/http_server"
-	"github.com/Uranury/WorkoutTracker/internal/infra"
 )
 
 func main() {
-	deps, cleanup, err := infra.New()
+	deps, cleanup, err := infra.NewDeps()
 	if err != nil {
 		log.Fatalf("Failed to initialize dependencies: %v", err)
 	}
 	defer cleanup()
 
-	server := http_server.NewHTTPServer(deps)
-	srv := server.Start()
+	app := infra.NewApp(deps)
+	server := http_server.NewHTTPServer(app)
 
-	deps.Logger.Info("Server started", "addr", deps.Config.ListenAddr)
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	sig := <-quit
-	deps.Logger.Info("Received shutdown signal", "signal", sig)
-
-	// Attempt graceful shutdown with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shutdownCancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		deps.Logger.Error("Server forced to shutdown", "error", err)
-		os.Exit(1)
+	if err := server.Start(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 
-	deps.Logger.Info("Server stopped gracefully")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Shutdown failed: %v", err)
+	}
+
+	log.Println("Server exited cleanly")
 }

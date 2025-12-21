@@ -10,10 +10,10 @@ import (
 )
 
 type Auth struct {
-	authService *services.Auth
+	authService services.Auth
 }
 
-func NewAuth(authService *services.Auth) *Auth {
+func NewAuth(authService services.Auth) *Auth {
 	return &Auth{authService: authService}
 }
 
@@ -30,7 +30,7 @@ func (m *Auth) JWTAuth() gin.HandlerFunc {
 			return
 		}
 		tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
-		claims, err := m.authService.VerifyJWT(tokenString)
+		claims, err := m.authService.ValidateToken(tokenString)
 		if err != nil {
 			apperrors.GenHTTPError(c, http.StatusUnauthorized, "invalid token", nil)
 			c.Abort()
