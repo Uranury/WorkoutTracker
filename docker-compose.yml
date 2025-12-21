@@ -1,0 +1,51 @@
+services:
+  app:
+    build: .
+    container_name: workout_tracker_app
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=secret
+      - DB_NAME=workout
+      - DB_DRIVER=postgres
+      - DB_SSLMODE=disable
+      - JWT_KEY=jafjq0jf0axfni1
+      - LISTEN_ADDR=:8080
+      - MIGRATIONS_PATH=/app/migrations
+    depends_on:
+      db:
+        condition: service_healthy 
+    volumes:
+      - ./migrations:/app/migrations
+    networks:
+      - workout-network
+
+  db:
+    image: postgres:16
+    container_name: workout-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: workout
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d workout"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - workout-network
+
+volumes:
+  db-data:
+
+networks:
+  workout-network:
+    driver: bridge

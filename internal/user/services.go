@@ -2,10 +2,11 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/Uranury/WorkoutTracker/pkg/apperrors"
 	"golang.org/x/crypto/bcrypt"
-	"regexp"
 )
 
 type Service interface {
@@ -24,18 +25,6 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) Create(ctx context.Context, request SignUpRequest) (*User, error) {
-	// Validation
-	if err := validateEmail(request.Email); err != nil {
-		return nil, err
-	}
-	if err := validatePassword(request.Password); err != nil {
-		return nil, err
-	}
-	if err := validateUsername(request.Username); err != nil {
-		return nil, err
-	}
-
-	// Check if user already exists
 	existing, _ := s.repo.GetByEmail(ctx, request.Email)
 	if existing != nil {
 		return nil, errors.New("email already registered")
@@ -46,13 +35,11 @@ func (s *service) Create(ctx context.Context, request SignUpRequest) (*User, err
 		return nil, errors.New("username already taken")
 	}
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// Create user
 	user := &User{
 		Username: request.Username,
 		Email:    request.Email,
@@ -71,12 +58,14 @@ func (s *service) Create(ctx context.Context, request SignUpRequest) (*User, err
 func (s *service) ValidateCredentials(ctx context.Context, username, password string) (*User, error) {
 	user, err := s.repo.GetByUsername(ctx, username)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		return nil, errors.New("invalid credentials")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return nil, fmt.Errorf("invalid password")
 	}
 
 	return user, nil
@@ -99,17 +88,10 @@ func (s *service) Update(ctx context.Context, id int64, updates UpdateUserInput)
 		return nil, err
 	}
 
-	// Apply updates
 	if updates.Username != nil {
-		if err := validateUsername(*updates.Username); err != nil {
-			return nil, err
-		}
 		user.Username = *updates.Username
 	}
 	if updates.Email != nil {
-		if err := validateEmail(*updates.Email); err != nil {
-			return nil, err
-		}
 		user.Email = *updates.Email
 	}
 	if updates.Age != nil {
@@ -124,27 +106,4 @@ func (s *service) Update(ctx context.Context, id int64, updates UpdateUserInput)
 	}
 
 	return user, nil
-}
-
-// Validation helpers
-func validateEmail(email string) error {
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	if !emailRegex.MatchString(email) {
-		return errors.New("invalid email format")
-	}
-	return nil
-}
-
-func validatePassword(password string) error {
-	if len(password) < 8 {
-		return errors.New("password must be at least 8 characters")
-	}
-	return nil
-}
-
-func validateUsername(username string) error {
-	if len(username) < 3 || len(username) > 50 {
-		return errors.New("username must be between 3 and 50 characters")
-	}
-	return nil
 }
