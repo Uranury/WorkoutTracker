@@ -77,13 +77,6 @@ func (s *service) GetByID(ctx context.Context, id int64) (*User, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-type UpdateUserInput struct {
-	Username *string
-	Email    *string
-	Age      *int
-	Gender   *string
-}
-
 func (s *service) Update(ctx context.Context, id int64, updates UpdateUserInput) (*User, error) {
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {

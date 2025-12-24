@@ -1,6 +1,8 @@
 package http_server
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func (h *HTTPServer) setupRoutes() {
 	// Public routes

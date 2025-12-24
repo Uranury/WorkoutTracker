@@ -5,9 +5,9 @@ import (
 	"github.com/Uranury/WorkoutTracker/internal/middleware"
 	"github.com/Uranury/WorkoutTracker/internal/services"
 	"github.com/Uranury/WorkoutTracker/pkg/apperrors"
+	"github.com/Uranury/WorkoutTracker/pkg/validation"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
 )
 
 type Handler struct {
@@ -29,12 +29,11 @@ type SignUpRequest struct {
 
 // SignUp registers a new user
 func (h *Handler) SignUp(c *gin.Context) {
-	request := SignUpRequest{}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		apperrors.GenHTTPError(c, http.StatusBadRequest, err.Error(), nil)
+	req, ok := validation.BindAndValidate[SignUpRequest](c)
+	if !ok {
 		return
 	}
-	user, err := h.service.Create(c.Request.Context(), request)
+	user, err := h.service.Create(c.Request.Context(), *req)
 	if err != nil {
 		apperrors.GenHTTPError(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -52,13 +51,17 @@ type LoginResponse struct {
 	User  User   `json:"user"`
 }
 
+type LoginPathParam struct {
+	ID string `form:"id" binding:"required" validate:"required,uuid"`
+}
+
 func (h *Handler) Login(c *gin.Context) {
-	request := LoginRequest{}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		apperrors.GenHTTPError(c, http.StatusBadRequest, err.Error(), nil)
+	req, ok := validation.BindAndValidate[LoginRequest](c)
+	if !ok {
 		return
 	}
-	user, err := h.service.ValidateCredentials(c.Request.Context(), request.Username, request.Password)
+
+	user, err := h.service.ValidateCredentials(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			apperrors.GenHTTPError(c, http.StatusNotFound, err.Error(), nil)
@@ -93,6 +96,13 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+type UpdateUserInput struct {
+	Username *string `json:"username" binding:"required" validate:"required,min=3,max=32"`
+	Email    *string `json:"email" binding:"required" validate:"required,email"`
+	Age      *int    `json:"age" binding:"required" validate:"required,gt=0"`
+	Gender   *string `json:"gender" binding:"required" validate:"required,oneof=Male Female"`
+}
+
 // UpdateProfile updates the current user's profile
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
@@ -101,13 +111,12 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	var req UpdateUserInput
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apperrors.GenHTTPError(c, http.StatusBadRequest, err.Error(), nil)
+	req, ok := validation.BindAndValidate[UpdateUserInput](c)
+	if !ok {
 		return
 	}
 
-	user, err := h.service.Update(c.Request.Context(), userID, req)
+	user, err := h.service.Update(c.Request.Context(), userID, *req)
 	if err != nil {
 		apperrors.GenHTTPError(c, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -116,17 +125,18 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+type IntIDPathParam struct {
+	ID int64 `uri:"id" binding:"required" validate:"required,gt=0"`
+}
+
 // GetUserByID is for admin use cases (optional)
 func (h *Handler) GetUserByID(c *gin.Context) {
-	idParam := c.Param("id")
-
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil {
-		apperrors.GenHTTPError(c, http.StatusBadRequest, "invalid user id", nil)
+	idParam, ok := validation.BindAndValidateURI[IntIDPathParam](c)
+	if !ok {
 		return
 	}
 
-	user, err := h.service.GetByID(c.Request.Context(), id)
+	user, err := h.service.GetByID(c.Request.Context(), idParam.ID)
 	if err != nil {
 		apperrors.GenHTTPError(c, http.StatusInternalServerError, "failed to get user", nil)
 		return
