@@ -8,6 +8,7 @@ import (
 	"github.com/Uranury/WorkoutTracker/pkg/apperrors"
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
+	"strings"
 )
 
 type Service interface {
@@ -93,7 +94,7 @@ func (s *service) Update(ctx context.Context, id int64, updates UpdateUserInput)
 		user.Age = *updates.Age
 	}
 	if updates.Gender != nil {
-		user.Gender = *updates.Gender
+		user.Gender = strings.ToLower(*updates.Gender)
 	}
 
 	if err := s.repo.Update(ctx, user); err != nil {

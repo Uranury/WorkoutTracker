@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"errors"
-	"github.com/Uranury/WorkoutTracker/internal/services"
+	"github.com/Uranury/WorkoutTracker/internal/auth"
 	"github.com/Uranury/WorkoutTracker/pkg/apperrors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -10,10 +10,10 @@ import (
 )
 
 type Auth struct {
-	authService services.Auth
+	authService auth.Service
 }
 
-func NewAuth(authService services.Auth) *Auth {
+func NewAuth(authService auth.Service) *Auth {
 	return &Auth{authService: authService}
 }
 

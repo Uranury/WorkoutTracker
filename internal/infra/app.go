@@ -1,8 +1,8 @@
 package infra
 
 import (
+	"github.com/Uranury/WorkoutTracker/internal/auth"
 	"github.com/Uranury/WorkoutTracker/internal/middleware"
-	"github.com/Uranury/WorkoutTracker/internal/services"
 	"github.com/Uranury/WorkoutTracker/internal/user"
 	"github.com/Uranury/WorkoutTracker/pkg/config"
 	"log/slog"
@@ -12,7 +12,7 @@ type App struct {
 	deps *Deps
 
 	// Shared services
-	authService services.Auth
+	authService auth.Service
 
 	// Module services (lazy-loaded or pre-initialized)
 	userService user.Service
@@ -24,7 +24,7 @@ type App struct {
 func NewApp(deps *Deps) *App {
 	app := &App{
 		deps:        deps,
-		authService: services.NewAuth(deps.Config.JWTKey),
+		authService: auth.NewAuth(deps.Config.JWTKey),
 	}
 
 	app.authMiddleware = middleware.NewAuth(app.authService)

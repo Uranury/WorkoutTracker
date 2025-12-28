@@ -2,8 +2,8 @@ package user
 
 import (
 	"errors"
+	"github.com/Uranury/WorkoutTracker/internal/auth"
 	"github.com/Uranury/WorkoutTracker/internal/middleware"
-	"github.com/Uranury/WorkoutTracker/internal/services"
 	"github.com/Uranury/WorkoutTracker/pkg/apperrors"
 	"github.com/Uranury/WorkoutTracker/pkg/validation"
 	"github.com/gin-gonic/gin"
@@ -12,10 +12,10 @@ import (
 
 type Handler struct {
 	service     Service
-	authService services.Auth
+	authService auth.Service
 }
 
-func NewHandler(service Service, authService services.Auth) *Handler {
+func NewHandler(service Service, authService auth.Service) *Handler {
 	return &Handler{service: service, authService: authService}
 }
 
@@ -24,7 +24,7 @@ type SignUpRequest struct {
 	Password string `json:"password" binding:"required" validate:"required,min=8"`
 	Email    string `json:"email" binding:"required" validate:"required,email"`
 	Age      int    `json:"age" binding:"required" validate:"required,gt=0"`
-	Gender   string `json:"gender" binding:"required" validate:"required,oneof=Male Female"`
+	Gender   string `json:"gender" binding:"required" validate:"required,oneof=male female"`
 }
 
 // SignUp registers a new user
@@ -49,10 +49,6 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Token string `json:"token"`
 	User  User   `json:"user"`
-}
-
-type LoginPathParam struct {
-	ID string `form:"id" binding:"required" validate:"required,uuid"`
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -97,10 +93,10 @@ func (h *Handler) GetProfile(c *gin.Context) {
 }
 
 type UpdateUserInput struct {
-	Username *string `json:"username" binding:"required" validate:"required,min=3,max=32"`
-	Email    *string `json:"email" binding:"required" validate:"required,email"`
-	Age      *int    `json:"age" binding:"required" validate:"required,gt=0"`
-	Gender   *string `json:"gender" binding:"required" validate:"required,oneof=Male Female"`
+	Username *string `json:"username" validate:"omitempty,min=3,max=32"`
+	Email    *string `json:"email" validate:"omitempty,email"`
+	Age      *int    `json:"age" validate:"omitempty,gt=0"`
+	Gender   *string `json:"gender" validate:"omitempty,oneof=male female"`
 }
 
 // UpdateProfile updates the current user's profile
