@@ -3,7 +3,7 @@ package infra
 import (
 	"fmt"
 	"github.com/Uranury/WorkoutTracker/pkg/config"
-	db2 "github.com/Uranury/WorkoutTracker/pkg/db"
+	"github.com/Uranury/WorkoutTracker/pkg/database"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
 	"log/slog"
@@ -27,11 +27,11 @@ func NewDeps() (*Deps, func(), error) {
 
 	logger := slog.Default()
 
-	if err := db2.RunMigrations(cfg.Driver, cfg.DSN(), cfg.MigrationsPath, logger); err != nil {
+	if err := database.RunMigrations(cfg.Driver, cfg.DSN(), cfg.MigrationsPath, logger); err != nil {
 		return nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	dbConn, err := db2.InitDB(cfg.Driver, cfg.DSN(), logger)
+	dbConn, err := database.InitDB(cfg.Driver, cfg.DSN(), logger)
 	if err != nil {
 		return nil, nil, err
 	}

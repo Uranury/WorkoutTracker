@@ -23,10 +23,10 @@ type App struct {
 
 func NewApp(deps *Deps) *App {
 	app := &App{
-		deps:        deps,
-		authService: auth.NewAuth(deps.Config.JWTKey),
+		deps: deps,
 	}
 
+	app.initAuth()
 	app.authMiddleware = middleware.NewAuth(app.authService)
 
 	// Initialize modules in dependency order
@@ -35,6 +35,12 @@ func NewApp(deps *Deps) *App {
 	// ...
 
 	return app
+}
+
+func (a *App) initAuth() {
+	logger := a.deps.Logger.With("module", "auth")
+	authRepo := auth.NewRepository(a.deps.DBConn)
+	a.authService = auth.NewAuth(a.deps.Config.JWTKey, a.deps.DBConn, logger, authRepo)
 }
 
 func (a *App) initUser() {

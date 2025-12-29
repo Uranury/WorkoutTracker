@@ -67,12 +67,20 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.GenerateToken(user.ID)
+	accessToken, err := h.authService.GenerateToken(user.ID)
 	if err != nil {
 		apperrors.GenHTTPError(c, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, LoginResponse{Token: token, User: *user})
+
+	refreshToken, err := h.authService.GenerateRefreshToken(c.Request.Context(), user.ID, c.Request.UserAgent(), c.ClientIP())
+	if err != nil {
+		apperrors.GenHTTPError(c, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	c.SetCookie("refresh_token", refreshToken, int(auth.RefreshTokenTTL.Seconds()), "/", "", false, true)
+	c.JSON(http.StatusOK, LoginResponse{Token: accessToken, User: *user})
 }
 
 // GetProfile returns the current user's profile

@@ -9,8 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/jmoiron/sqlx"
 	"log/slog"
 	"time"
+)
+
+var (
+	RefreshTokenTTL = time.Hour * 24 * 30
+	AccessTokenTTL  = time.Minute * 5
 )
 
 type Service interface {
@@ -25,11 +31,12 @@ type Service interface {
 type auth struct {
 	jwtKey []byte
 	logger *slog.Logger
+	db     *sqlx.DB
 	repo   RefreshTokenRepository
 }
 
-func NewAuth(secret string, repo RefreshTokenRepository, logger *slog.Logger) Service {
-	return &auth{jwtKey: []byte(secret), repo: repo, logger: logger}
+func NewAuth(secret string, db *sqlx.DB, logger *slog.Logger, repo RefreshTokenRepository) Service {
+	return &auth{jwtKey: []byte(secret), db: db, logger: logger, repo: repo}
 }
 
 type Claims struct {
@@ -41,7 +48,7 @@ func (s *auth) GenerateToken(userID int64) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenTTL)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -56,10 +63,10 @@ func (s *auth) ValidateToken(tokenString string) (*Claims, error) {
 		}
 		return s.jwtKey, nil
 	})
-	if err != nil || !token.Valid {
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse token: %w", err)
-		}
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+	if token == nil || !token.Valid {
 		return nil, fmt.Errorf("token is not valid")
 	}
 	return claims, nil
@@ -78,7 +85,7 @@ func (s *auth) GenerateRefreshToken(ctx context.Context, userID int64, userAgent
 	refreshToken := RefreshToken{
 		UserID:    userID,
 		TokenHash: tokenHash,
-		ExpiresAt: time.Now().Add(time.Hour * 24 * 30),
+		ExpiresAt: time.Now().Add(RefreshTokenTTL),
 		UserAgent: userAgent,
 		IP:        ip,
 	}
@@ -98,49 +105,65 @@ func (s *auth) ValidateRefreshToken(ctx context.Context, tokenString string) (*R
 		}
 		return nil, fmt.Errorf("failed to validate refresh token: %w", err)
 	}
-	if token.RevokedAt != nil {
-		return nil, fmt.Errorf("refresh token is revoked")
-	}
-	if time.Now().After(token.ExpiresAt) {
-		return nil, fmt.Errorf("refresh token is expired")
-	}
 
 	return token, nil
 }
 
 func (s *auth) RefreshAccessToken(ctx context.Context, refreshToken string) (string, string, error) {
-	tx, err := s.repo.BeginTx(ctx)
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		s.logger.Error("failed to begin transaction: %w", err)
+		s.logger.Error("failed to begin transaction", "err", err)
 		return "", "", fmt.Errorf("failed to start transaction")
 	}
 
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			s.logger.Error("failed to rollback transaction: %w", err)
-		}
+		_ = tx.Rollback()
 	}()
 
-	rt, err := s.ValidateRefreshToken(ctx, refreshToken)
+	repo := NewRepositoryFromTx(tx)
+	tokenHash := hashToken(refreshToken)
+
+	token, err := repo.FindByHashForUpdate(ctx, tokenHash)
 	if err != nil {
-		return "", "", err
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", "", fmt.Errorf("refresh token not found")
+		}
+		return "", "", fmt.Errorf("failed to validate refresh token: %w", err)
 	}
-	accessToken, err := s.GenerateToken(rt.UserID)
+
+	accessToken, err := s.GenerateToken(token.UserID)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	if err := repo.RevokeByHash(ctx, tokenHash); err != nil {
+		return "", "", fmt.Errorf("failed to revoke refresh token: %w", err)
+	}
+
+	b := make([]byte, 32)
+	_, err = rand.Read(b)
 	if err != nil {
 		return "", "", err
 	}
 
-	if err := s.RevokeRefreshToken(ctx, refreshToken); err != nil {
-		return "", "", fmt.Errorf("failed to revoke refresh token: %w", err)
+	newToken := base64.URLEncoding.EncodeToString(b)
+	newHash := hashToken(newToken)
+
+	newRefreshToken := RefreshToken{
+		UserID:    token.UserID,
+		TokenHash: newHash,
+		ExpiresAt: time.Now().Add(RefreshTokenTTL),
+		UserAgent: token.UserAgent,
+		IP:        token.IP,
 	}
-	newRefresh, err := s.GenerateRefreshToken(ctx, rt.UserID, rt.UserAgent, rt.IP)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate new refresh token: %w", err)
+	if err := repo.Save(ctx, &newRefreshToken); err != nil {
+		return "", "", fmt.Errorf("failed to save refresh token: %w", err)
 	}
+
 	if err := tx.Commit(); err != nil {
 		return "", "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	return accessToken, newRefresh, nil
+	return accessToken, newToken, nil
 }
 
 func (s *auth) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
