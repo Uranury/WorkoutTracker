@@ -80,11 +80,11 @@ func (r *repository) GetByUsername(ctx context.Context, username string) (*User,
 func (r *repository) Update(ctx context.Context, user *User) error {
 	query := `
         UPDATE users 
-        SET username = $1, email = $2, age = $3, gender = $4, updated_at = NOW()
-        WHERE id = $5`
+        SET username = $1, email = $2, age = $3, gender = $4, updated_at = NOW(), weight = $5
+        WHERE id = $6`
 
 	_, err := r.db.ExecContext(ctx, query,
-		user.Username, user.Email, user.Age, user.Gender, user.ID,
+		user.Username, user.Email, user.Age, user.Gender, user.Weight, user.ID,
 	)
 	return err
 }

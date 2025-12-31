@@ -96,6 +96,9 @@ func (s *service) Update(ctx context.Context, id int64, updates UpdateUserInput)
 	if updates.Gender != nil {
 		user.Gender = strings.ToLower(*updates.Gender)
 	}
+	if updates.Weight != nil {
+		user.Weight = *updates.Weight
+	}
 
 	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, err

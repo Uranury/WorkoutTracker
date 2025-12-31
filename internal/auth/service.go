@@ -26,6 +26,7 @@ type Service interface {
 	GenerateRefreshToken(ctx context.Context, userID int64, userAgent string, ip string) (string, error)
 	ValidateRefreshToken(ctx context.Context, tokenString string) (*RefreshToken, error)
 	RefreshAccessToken(ctx context.Context, refreshToken string) (string, string, error)
+	RevokeRefreshToken(ctx context.Context, refreshToken string) error
 }
 
 type auth struct {
