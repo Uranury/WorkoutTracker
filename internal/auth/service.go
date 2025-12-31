@@ -117,7 +117,9 @@ func (s *auth) RefreshAccessToken(ctx context.Context, refreshToken string) (str
 	}
 
 	defer func() {
-		_ = tx.Rollback()
+		if err != nil {
+			_ = tx.Rollback()
+		}
 	}()
 
 	repo := NewRepositoryFromTx(tx)

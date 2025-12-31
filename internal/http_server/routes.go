@@ -16,6 +16,7 @@ func (h *HTTPServer) setupRoutes() {
 	auth := h.router.Group("/auth")
 	auth.POST("/signup", userHandler.SignUp)
 	auth.POST("/login", userHandler.Login)
+	auth.POST("/refresh", userHandler.RefreshToken)
 
 	// Protected routes
 	api := h.router.Group("/api")

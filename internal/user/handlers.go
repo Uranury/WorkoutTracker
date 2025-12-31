@@ -79,7 +79,15 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("refresh_token", refreshToken, int(auth.RefreshTokenTTL.Seconds()), "/", "", false, true)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		MaxAge:   int(auth.RefreshTokenTTL.Seconds()),
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+	})
 	c.JSON(http.StatusOK, LoginResponse{Token: accessToken, User: *user})
 }
 
@@ -98,6 +106,35 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+type AccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+func (h *Handler) RefreshToken(c *gin.Context) {
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		apperrors.GenHTTPError(c, http.StatusUnauthorized, err.Error(), nil)
+		return
+	}
+
+	accessToken, newRefresh, err := h.authService.RefreshAccessToken(c.Request.Context(), refreshToken)
+	if err != nil {
+		apperrors.GenHTTPError(c, http.StatusInternalServerError, "failed to refresh access token", nil)
+		return
+	}
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefresh,
+		Path:     "/",
+		MaxAge:   int(auth.RefreshTokenTTL.Seconds()),
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+	})
+	c.JSON(http.StatusOK, AccessTokenResponse{AccessToken: accessToken})
 }
 
 type UpdateUserInput struct {
