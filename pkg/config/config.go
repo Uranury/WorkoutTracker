@@ -11,6 +11,7 @@ type Config struct {
 	MigrationsPath string `yaml:"migrations_path" env:"MIGRATIONS_PATH" env-required:"true"`
 	ListenAddr     string `yaml:"listen_addr" env:"LISTEN_ADDR" env-default:":8080"`
 	JWTKey         string `yaml:"jwt_key" env:"JWT_KEY" env-required:"true"`
+	ResendAPIKey   string `yaml:"resend_api_key" env:"RESEND_API_KEY" env-default:""`
 }
 
 type DBConfig struct {

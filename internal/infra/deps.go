@@ -6,17 +6,19 @@ import (
 	"github.com/Uranury/WorkoutTracker/pkg/database"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
+	"github.com/resend/resend-go/v3"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
 type Deps struct {
-	DBConn      *sqlx.DB
-	RedisClient *redis.Client
-	HTTPClient  *http.Client
-	Logger      *slog.Logger
-	Config      *config.Config
+	DBConn       *sqlx.DB
+	RedisClient  *redis.Client
+	HTTPClient   *http.Client
+	ResendClient *resend.Client
+	Logger       *slog.Logger
+	Config       *config.Config
 }
 
 func NewDeps() (*Deps, func(), error) {
@@ -48,11 +50,14 @@ func NewDeps() (*Deps, func(), error) {
 		Timeout: time.Second * 20,
 	}
 
+	resendClient := resend.NewClient(cfg.ResendAPIKey)
+
 	deps := &Deps{
-		DBConn:     dbConn,
-		HTTPClient: httpClient,
-		Logger:     logger,
-		Config:     cfg,
+		DBConn:       dbConn,
+		HTTPClient:   httpClient,
+		ResendClient: resendClient,
+		Logger:       logger,
+		Config:       cfg,
 	}
 
 	cleanup := func() {
