@@ -14,4 +14,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 	Password  string    `json:"-" db:"password"`
+
+	FailedLoginAttempts int        `json:"failed_login_attempts" db:"failed_login_attempts"`
+	UnlockTime          *time.Time `json:"unlock_time" db:"unlock_time"`
 }

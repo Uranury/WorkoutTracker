@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
 	"strings"
+	"time"
 )
 
 type Service interface {
@@ -58,7 +59,7 @@ func (s *service) Create(ctx context.Context, request SignUpRequest) (*User, err
 	return user, nil
 }
 
-func (s *service) ValidateCredentials(ctx context.Context, username, password string) (*User, error) {
+func (s *service) ValidateCredentials(ctx context.Context, username string, password string) (*User, error) {
 	user, err := s.repo.GetByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -67,8 +68,27 @@ func (s *service) ValidateCredentials(ctx context.Context, username, password st
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
+	if user.UnlockTime != nil && user.UnlockTime.After(time.Now()) {
+		return nil, fmt.Errorf("account is locked, please try again later")
+	}
+
+	if user.UnlockTime != nil && user.UnlockTime.Before(time.Now()) {
+		if err := s.repo.ResetFailedAttempts(ctx, user.Username); err != nil {
+			s.logger.Error("Failed to reset expired lock", "err", err.Error())
+		}
+		user.FailedLoginAttempts = 0
+		user.UnlockTime = nil
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		if err := s.repo.IncrementFailedAttempts(ctx, user.Username, 3, time.Minute*15); err != nil {
+			s.logger.Error("Failed to increment failed attempts", "err", err.Error())
+		}
 		return nil, fmt.Errorf("invalid password")
+	}
+
+	if err := s.repo.ResetFailedAttempts(ctx, user.Username); err != nil {
+		s.logger.Error("Failed to reset failed attempts", "err", err.Error())
 	}
 
 	return user, nil

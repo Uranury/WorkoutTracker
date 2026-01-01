@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/Uranury/WorkoutTracker/internal/infra"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
@@ -16,8 +17,17 @@ type HTTPServer struct {
 }
 
 func NewHTTPServer(app *infra.App) *HTTPServer {
+	router := gin.Default()
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	server := &HTTPServer{
-		router: gin.Default(),
+		router: router,
 		app:    app,
 	}
 

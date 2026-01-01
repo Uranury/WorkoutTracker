@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"log/slog"
+	"time"
 )
 
 type Repository interface {
@@ -15,6 +16,9 @@ type Repository interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id int64) error
+
+	IncrementFailedAttempts(ctx context.Context, username string, maxAttempts int, lockDuration time.Duration) error
+	ResetFailedAttempts(ctx context.Context, username string) error
 }
 
 type repository struct {
@@ -92,5 +96,25 @@ func (r *repository) Update(ctx context.Context, user *User) error {
 func (r *repository) Delete(ctx context.Context, id int64) error {
 	query := "DELETE FROM users WHERE id = $1"
 	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
+
+func (r *repository) IncrementFailedAttempts(ctx context.Context, username string, maxAttempts int, lockDuration time.Duration) error {
+	query := `
+        UPDATE users
+        SET failed_login_attempts = failed_login_attempts + 1,
+            unlock_time = CASE
+                WHEN failed_login_attempts + 1 >= $2 THEN NOW() + $3 * INTERVAL '1 second'
+                ELSE unlock_time
+            END
+        WHERE username = $1
+    `
+	_, err := r.db.ExecContext(ctx, query, username, maxAttempts, int(lockDuration.Seconds()))
+	return err
+}
+
+func (r *repository) ResetFailedAttempts(ctx context.Context, username string) error {
+	query := "UPDATE users SET failed_login_attempts = 0, unlock_time = NULL WHERE username = $1"
+	_, err := r.db.ExecContext(ctx, query, username)
 	return err
 }
