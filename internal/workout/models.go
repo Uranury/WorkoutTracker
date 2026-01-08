@@ -38,11 +38,10 @@ type Session struct {
 }
 
 type SessionExercise struct {
-	ID         int64  `json:"id" db:"id"`
-	SessionID  int64  `json:"session_id" db:"session_id"`
-	ExerciseID int64  `json:"exercise_id" db:"exercise_id"`
-	OrderIndex uint   `json:"order_index" db:"order_index"`
-	Notes      string `json:"notes" db:"notes"`
+	ID         int64 `json:"id" db:"id"`
+	SessionID  int64 `json:"session_id" db:"session_id"`
+	ExerciseID int64 `json:"exercise_id" db:"exercise_id"`
+	OrderIndex uint  `json:"order_index" db:"order_index"`
 }
 
 type SessionExerciseSet struct {
