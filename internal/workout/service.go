@@ -20,6 +20,8 @@ func NewService(repo Repository, db *sqlx.DB) Service {
 	return &service{repo: repo, db: db}
 }
 
+// TODO: implement adding exercises to an existing session (for sessions started without a template)
+
 func (s *service) CreateTemplateWithExercises(ctx context.Context, templ *Template) (int64, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -91,28 +93,24 @@ func (s *service) StartSession(ctx context.Context, userId int64, name string, t
 	return sessionID, nil
 }
 
-func (s *service) CreateSessionWithExercises(ctx context.Context, session *Session) (int64, error) {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return 0, err
+func (s *service) AddExercisesToSession(ctx context.Context, sessionID, exerciseID int64, orderIndex uint) (int64, error) {
+	sessionExercise := SessionExercise{
+		SessionID:  sessionID,
+		ExerciseID: exerciseID,
+		OrderIndex: orderIndex,
 	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-	repo := NewRepositoryWithTx(tx)
 
-	sessionId, err := repo.CreateSession(ctx, *session)
-	if err != nil {
-		return 0, fmt.Errorf("create session: %w", err)
-	}
-	for _, exercise := range session.Exercises {
-		exercise.SessionID = sessionId
-		if _, err := repo.CreateSessionExercise(ctx, exercise); err != nil {
-			return 0, fmt.Errorf("create session exercise: %w", err)
+	if orderIndex == 0 {
+		index, err := s.repo.GetMaxOrderIndex(ctx, sessionID)
+		if err != nil {
+			return 0, fmt.Errorf("get max order index: %w", err)
 		}
+		sessionExercise.OrderIndex = index
 	}
-	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("commit: %w", err)
+
+	sessionExerciseID, err := s.repo.CreateSessionExercise(ctx, sessionExercise)
+	if err != nil {
+		return 0, fmt.Errorf("create session exercise: %w", err)
 	}
-	return sessionId, nil
+	return sessionExerciseID, nil
 }

@@ -14,6 +14,8 @@ type Repository interface {
 	CreateSession(ctx context.Context, session Session) (int64, error)
 	CreateSessionExercise(ctx context.Context, session SessionExercise) (int64, error)
 	GetSessionByTemplateID(ctx context.Context, templateID int64) (Session, error)
+	GetMaxOrderIndex(ctx context.Context, sessionID int64) (uint, error)
+
 	CreateSet(ctx context.Context, excSet SessionExerciseSet) (int64, error)
 }
 
@@ -77,6 +79,15 @@ func (r *repository) CreateSessionExercise(ctx context.Context, se SessionExerci
 	var id int64
 	err := r.executor.QueryRowxContext(ctx, query, se.SessionID, se.ExerciseID, se.OrderIndex).Scan(&id)
 	return id, err
+}
+
+func (r *repository) GetMaxOrderIndex(ctx context.Context, sessionID int64) (uint, error) {
+	query := `SELECT COALESCE(MAX(order_index), 0) FROM workout_session_exercises WHERE session_id = $1`
+	var order uint
+	if err := r.executor.QueryRowxContext(ctx, query, sessionID).Scan(&order); err != nil {
+		return 0, err
+	}
+	return order, nil
 }
 
 func (r *repository) GetSessionByTemplateID(ctx context.Context, templateID int64) (Session, error) {
