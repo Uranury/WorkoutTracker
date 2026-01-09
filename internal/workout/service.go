@@ -20,7 +20,9 @@ func NewService(repo Repository, db *sqlx.DB) Service {
 	return &service{repo: repo, db: db}
 }
 
-// TODO: implement actually recording sets to existing session exercises
+// TODO: Make template creation accept only essential data and populate the rest itself, don't expect a business model from handlers
+// TODO: Implement adding exercises to existing templates (same as adding to sessions)
+// TODO: Implement actually recording sets to existing session exercises
 
 func (s *service) CreateTemplateWithExercises(ctx context.Context, templ *Template) (int64, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)

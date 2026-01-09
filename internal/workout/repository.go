@@ -62,7 +62,7 @@ func (r *repository) CreateTemplateExercise(ctx context.Context, te TemplateExer
 
 func (r *repository) GetTemplateExercises(ctx context.Context, templateID int64) ([]TemplateExercise, error) {
 	var exercises []TemplateExercise
-	query := `SELECT * FROM workout_template_exercises WHERE template_id = $1`
+	query := `SELECT * FROM workout_template_exercises WHERE template_id = $1 ORDER BY order_index`
 	err := r.executor.SelectContext(ctx, &exercises, query, templateID)
 	return exercises, err
 }
