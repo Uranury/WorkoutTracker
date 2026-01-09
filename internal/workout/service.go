@@ -20,7 +20,7 @@ func NewService(repo Repository, db *sqlx.DB) Service {
 	return &service{repo: repo, db: db}
 }
 
-// TODO: implement adding exercises to an existing session (for sessions started without a template)
+// TODO: implement actually recording sets to existing session exercises
 
 func (s *service) CreateTemplateWithExercises(ctx context.Context, templ *Template) (int64, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
@@ -105,7 +105,7 @@ func (s *service) AddExercisesToSession(ctx context.Context, sessionID, exercise
 		if err != nil {
 			return 0, fmt.Errorf("get max order index: %w", err)
 		}
-		sessionExercise.OrderIndex = index
+		sessionExercise.OrderIndex = index + 1
 	}
 
 	sessionExerciseID, err := s.repo.CreateSessionExercise(ctx, sessionExercise)
