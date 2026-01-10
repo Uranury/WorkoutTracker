@@ -44,11 +44,18 @@ type SessionExercise struct {
 	OrderIndex uint  `json:"order_index" db:"order_index"`
 }
 
+type WeightUnit string
+
+var (
+	Kilograms WeightUnit = "kg"
+	Pounds    WeightUnit = "lbs"
+)
+
 type SessionExerciseSet struct {
-	ID                int64   `json:"id" db:"id"`
-	SessionExerciseID int64   `json:"session_exercise_id" db:"session_exercise_id"`
-	SetNumber         uint    `json:"set_number" db:"set_number"`
-	Reps              uint    `json:"reps" db:"reps"`
-	Weight            float64 `json:"weight" db:"weight"`
-	WeightUnit        string  `json:"weight_unit" db:"weight_unit"`
+	ID                int64      `json:"id" db:"id"`
+	SessionExerciseID int64      `json:"session_exercise_id" db:"session_exercise_id"`
+	SetNumber         uint       `json:"set_number" db:"set_number"`
+	Reps              uint       `json:"reps" db:"reps"`
+	Weight            float64    `json:"weight" db:"weight"`
+	WeightUnit        WeightUnit `json:"weight_unit" db:"weight_unit"`
 }
