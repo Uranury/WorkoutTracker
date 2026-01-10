@@ -19,9 +19,9 @@ type TemplateExercise struct {
 	TemplateID int64 `json:"template_id" db:"template_id"`
 	ExerciseID int64 `json:"exercise_id" db:"exercise_id"`
 
-	OrderIndex uint `json:"order_index" db:"order_index"`
-	TargetSets uint `json:"target_sets" db:"target_sets"`
-	TargetReps uint `json:"target_reps" db:"target_reps"`
+	OrderIndex int `json:"order_index" db:"order_index"`
+	TargetSets int `json:"target_sets" db:"target_sets"`
+	TargetReps int `json:"target_reps" db:"target_reps"`
 }
 
 type Session struct {
@@ -41,7 +41,7 @@ type SessionExercise struct {
 	ID         int64 `json:"id" db:"id"`
 	SessionID  int64 `json:"session_id" db:"session_id"`
 	ExerciseID int64 `json:"exercise_id" db:"exercise_id"`
-	OrderIndex uint  `json:"order_index" db:"order_index"`
+	OrderIndex int   `json:"order_index" db:"order_index"`
 }
 
 type WeightUnit string
@@ -54,8 +54,8 @@ var (
 type SessionExerciseSet struct {
 	ID                int64      `json:"id" db:"id"`
 	SessionExerciseID int64      `json:"session_exercise_id" db:"session_exercise_id"`
-	SetNumber         uint       `json:"set_number" db:"set_number"`
-	Reps              uint       `json:"reps" db:"reps"`
+	SetNumber         int        `json:"set_number" db:"set_number"`
+	Reps              int        `json:"reps" db:"reps"`
 	Weight            float64    `json:"weight" db:"weight"`
 	WeightUnit        WeightUnit `json:"weight_unit" db:"weight_unit"`
 }

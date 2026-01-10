@@ -47,7 +47,6 @@ CREATE TABLE IF NOT EXISTS workout_session_exercises (
     session_id BIGINT NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
     exercise_id BIGINT NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
     order_index INT NOT NULL CHECK (order_index > 0),
-    notes TEXT DEFAULT '',
 
     UNIQUE(session_id, order_index),
     UNIQUE(session_id, exercise_id)

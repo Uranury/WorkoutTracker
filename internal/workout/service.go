@@ -10,12 +10,12 @@ import (
 
 type Service interface {
 	CreateTemplate(ctx context.Context, userID int64, name, description string) (int64, error)
-	AddExerciseToTemplate(ctx context.Context, templateID, exerciseID int64, orderIndex, targetSets, targetReps uint) (int64, error)
+	AddExerciseToTemplate(ctx context.Context, templateID, exerciseID int64, orderIndex, targetSets, targetReps int) (int64, error)
 	StartSession(ctx context.Context, userId int64, name string, templateID *int64) (int64, error)
-	AddExerciseToSession(ctx context.Context, sessionID, exerciseID int64, orderIndex uint) (int64, error)
+	AddExerciseToSession(ctx context.Context, sessionID, exerciseID int64, orderIndex int) (int64, error)
 	SetSessionFinishTime(ctx context.Context, sessionID int64, finishedAt *time.Time) error
 	UpdateSession(ctx context.Context, session UpdateSession) error
-	RecordSetToSessionExercise(ctx context.Context, sessionExerciseID int64, setNumber, reps uint, weight float64, weightUnit WeightUnit) (int64, error)
+	RecordSetToSessionExercise(ctx context.Context, sessionExerciseID int64, setNumber, reps int, weight float64, weightUnit WeightUnit) (int64, error)
 }
 
 type service struct {
@@ -53,7 +53,7 @@ func (s *service) CreateTemplate(ctx context.Context, userID int64, name, descri
 	return templateId, nil
 }
 
-func (s *service) AddExerciseToTemplate(ctx context.Context, templateID, exerciseID int64, orderIndex, targetSets, targetReps uint) (int64, error) {
+func (s *service) AddExerciseToTemplate(ctx context.Context, templateID, exerciseID int64, orderIndex, targetSets, targetReps int) (int64, error) {
 	newTemplateExercise := &TemplateExercise{
 		TemplateID: templateID,
 		ExerciseID: exerciseID,
@@ -123,7 +123,7 @@ func (s *service) StartSession(ctx context.Context, userId int64, name string, t
 	return sessionID, nil
 }
 
-func (s *service) AddExerciseToSession(ctx context.Context, sessionID, exerciseID int64, orderIndex uint) (int64, error) {
+func (s *service) AddExerciseToSession(ctx context.Context, sessionID, exerciseID int64, orderIndex int) (int64, error) {
 	sessionExercise := &SessionExercise{
 		SessionID:  sessionID,
 		ExerciseID: exerciseID,
@@ -153,7 +153,7 @@ func (s *service) UpdateSession(ctx context.Context, session UpdateSession) erro
 	return s.repo.UpdateSession(ctx, session.ID, session.Name, session.Notes, session.PerformedDate, session.StartedAt)
 }
 
-func (s *service) RecordSetToSessionExercise(ctx context.Context, sessionExerciseID int64, setNumber, reps uint, weight float64, weightUnit WeightUnit) (int64, error) {
+func (s *service) RecordSetToSessionExercise(ctx context.Context, sessionExerciseID int64, setNumber, reps int, weight float64, weightUnit WeightUnit) (int64, error) {
 	performedSet := &SessionExerciseSet{
 		SessionExerciseID: sessionExerciseID,
 		SetNumber:         setNumber,

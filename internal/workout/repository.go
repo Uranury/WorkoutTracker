@@ -12,13 +12,13 @@ type Repository interface {
 	CreateTemplate(ctx context.Context, template Template) (int64, error)
 	CreateTemplateExercise(ctx context.Context, template TemplateExercise) (int64, error)
 	GetTemplateExercises(ctx context.Context, templateID int64) ([]TemplateExercise, error)
-	GetTemplateMaxOrderIndex(ctx context.Context, templateID int64) (uint, error)
+	GetTemplateMaxOrderIndex(ctx context.Context, templateID int64) (int, error)
 
 	CreateSession(ctx context.Context, session Session) (int64, error)
 	CreateSessionExercise(ctx context.Context, session SessionExercise) (int64, error)
 	GetSessionByID(ctx context.Context, sessionID int64) (Session, error)
 	GetSessionByTemplateID(ctx context.Context, templateID int64) (Session, error)
-	GetSessionMaxOrderIndex(ctx context.Context, sessionID int64) (uint, error)
+	GetSessionMaxOrderIndex(ctx context.Context, sessionID int64) (int, error)
 	UpdateSession(ctx context.Context, id int64, name, notes *string, performedDate *time.Time, startedAt *time.Time) error
 	UpdateSessionFinishTime(ctx context.Context, sessionID int64, finishedAt *time.Time) error
 
@@ -73,9 +73,9 @@ func (r *repository) GetTemplateExercises(ctx context.Context, templateID int64)
 	return exercises, err
 }
 
-func (r *repository) GetTemplateMaxOrderIndex(ctx context.Context, templateID int64) (uint, error) {
+func (r *repository) GetTemplateMaxOrderIndex(ctx context.Context, templateID int64) (int, error) {
 	query := `SELECT COALESCE(MAX(order_index), 0) FROM workout_template_exercises WHERE template_id = $1`
-	var order uint
+	var order int
 	if err := r.executor.QueryRowxContext(ctx, query, templateID).Scan(&order); err != nil {
 		return 0, err
 	}
@@ -105,9 +105,9 @@ func (r *repository) GetSessionByID(ctx context.Context, sessionID int64) (Sessi
 	return session, nil
 }
 
-func (r *repository) GetSessionMaxOrderIndex(ctx context.Context, sessionID int64) (uint, error) {
+func (r *repository) GetSessionMaxOrderIndex(ctx context.Context, sessionID int64) (int, error) {
 	query := `SELECT COALESCE(MAX(order_index), 0) FROM workout_session_exercises WHERE session_id = $1`
-	var order uint
+	var order int
 	if err := r.executor.QueryRowxContext(ctx, query, sessionID).Scan(&order); err != nil {
 		return 0, err
 	}
