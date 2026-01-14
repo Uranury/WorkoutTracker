@@ -3,19 +3,14 @@ package template
 import (
 	"context"
 	"github.com/Uranury/WorkoutTracker/pkg/database"
-	"github.com/jmoiron/sqlx"
 )
 
 type repository struct {
 	executor database.Executor
 }
 
-func NewRepository(db *sqlx.DB) Repository {
-	return &repository{executor: db}
-}
-
-func NewRepositoryWithTx(tx *sqlx.Tx) Repository {
-	return &repository{executor: tx}
+func NewRepository(executor database.Executor) Repository {
+	return &repository{executor: executor}
 }
 
 func (r *repository) CreateTemplate(ctx context.Context, template Template) (int64, error) {

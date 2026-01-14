@@ -5,21 +5,19 @@ import (
 	"fmt"
 	"github.com/Uranury/WorkoutTracker/internal/workout/session"
 	"github.com/Uranury/WorkoutTracker/internal/workout/template"
+	"github.com/Uranury/WorkoutTracker/pkg/database"
 	"github.com/Uranury/WorkoutTracker/pkg/utils"
-	"github.com/jmoiron/sqlx"
 	"time"
 )
-
-// TODO: Swap to txProvider pattern.
 
 type service struct {
 	templateRepo template.Repository
 	sessionRepo  session.Repository
-	db           *sqlx.DB
+	txProvider   database.TxProvider
 }
 
-func NewService(db *sqlx.DB) Service {
-	return &service{templateRepo: template.NewRepository(db), sessionRepo: session.NewRepository(db), db: db}
+func NewService(templateRepo template.Repository, sessionRepo session.Repository, txProvider database.TxProvider) Service {
+	return &service{templateRepo, sessionRepo, txProvider}
 }
 
 func (s *service) CreateTemplate(ctx context.Context, userID int64, name, description string) (int64, error) {
@@ -60,48 +58,48 @@ func (s *service) AddExerciseToTemplate(ctx context.Context, templateID, exercis
 }
 
 func (s *service) StartSession(ctx context.Context, userId int64, name string, templateID *int64) (int64, error) {
-	tx, err := s.db.BeginTxx(ctx, nil)
+	var sessionID int64
+
+	err := s.txProvider.RunInTx(ctx, func(exec database.Executor) error {
+		sessRepo := session.NewRepository(exec)
+		tmplRepo := template.NewRepository(exec)
+
+		newSession := &session.Session{
+			UserID:        userId,
+			Name:          name,
+			TemplateID:    templateID,
+			PerformedDate: time.Now(),
+			StartedAt:     utils.TimePtr(time.Now()),
+		}
+
+		sessionID, err := sessRepo.CreateSession(ctx, *newSession)
+		if err != nil {
+			return fmt.Errorf("create session: %w", err)
+		}
+
+		if templateID != nil {
+			templateExercises, err := tmplRepo.GetTemplateExercises(ctx, *templateID)
+			if err != nil {
+				return fmt.Errorf("get template exercises: %w", err)
+			}
+			for _, te := range templateExercises {
+				se := session.Exercise{
+					SessionID:  sessionID,
+					ExerciseID: te.ExerciseID,
+					OrderIndex: te.OrderIndex,
+				}
+				if _, err := sessRepo.CreateSessionExercise(ctx, se); err != nil {
+					return fmt.Errorf("create session exercise: %w", err)
+				}
+			}
+		}
+		return nil
+	})
+
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
 
-	sessRepo := session.NewRepositoryWithTx(tx)
-	tmplRepo := template.NewRepositoryWithTx(tx)
-
-	newSession := &session.Session{
-		UserID:        userId,
-		Name:          name,
-		TemplateID:    templateID,
-		PerformedDate: time.Now(),
-		StartedAt:     utils.TimePtr(time.Now()),
-	}
-
-	sessionID, err := sessRepo.CreateSession(ctx, *newSession)
-	if err != nil {
-		return 0, fmt.Errorf("create session: %w", err)
-	}
-
-	if templateID != nil {
-		templateExercises, err := tmplRepo.GetTemplateExercises(ctx, *templateID)
-		if err != nil {
-			return 0, fmt.Errorf("get template exercises: %w", err)
-		}
-		for _, te := range templateExercises {
-			se := session.Exercise{
-				SessionID:  sessionID,
-				ExerciseID: te.ExerciseID,
-				OrderIndex: te.OrderIndex,
-			}
-			if _, err := sessRepo.CreateSessionExercise(ctx, se); err != nil {
-				return 0, fmt.Errorf("create session exercise: %w", err)
-			}
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("commit: %w", err)
-	}
 	return sessionID, nil
 }
 
