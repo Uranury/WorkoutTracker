@@ -33,6 +33,14 @@ func (s *service) CreateTemplate(ctx context.Context, userID int64, name, descri
 	return templateId, nil
 }
 
+func (s *service) UpdateTemplate(ctx context.Context, templateID int64, name, description string) (template.Template, error) {
+	return s.templateRepo.UpdateTemplate(ctx, templateID, name, description)
+}
+
+func (s *service) DeleteTemplate(ctx context.Context, templateID int64) error {
+	return s.templateRepo.DeleteTemplate(ctx, templateID)
+}
+
 func (s *service) AddExerciseToTemplate(ctx context.Context, templateID, exerciseID int64, orderIndex, targetSets, targetReps int) (int64, error) {
 	newTemplateExercise := &template.Exercise{
 		TemplateID: templateID,

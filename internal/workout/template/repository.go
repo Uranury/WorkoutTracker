@@ -53,3 +53,16 @@ func (r *repository) GetTemplateMaxOrderIndex(ctx context.Context, templateID in
 	}
 	return order, nil
 }
+
+func (r *repository) UpdateTemplate(ctx context.Context, templateID int64, name string, description string) (Template, error) {
+	query := `UPDATE workout_templates SET name = $1, description = $2 WHERE id = $3 RETURNING id, user_id, name, description, created_at`
+	var tmpl Template
+	err := r.executor.QueryRowxContext(ctx, query, name, description, templateID).StructScan(&tmpl)
+	return tmpl, err
+}
+
+func (r *repository) DeleteTemplate(ctx context.Context, templateID int64) error {
+	query := `DELETE FROM workout_templates WHERE id = $1`
+	_, err := r.executor.ExecContext(ctx, query, templateID)
+	return err
+}

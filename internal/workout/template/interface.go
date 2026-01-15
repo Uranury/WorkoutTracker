@@ -7,4 +7,6 @@ type Repository interface {
 	CreateTemplateExercise(ctx context.Context, template Exercise) (int64, error)
 	GetTemplateExercises(ctx context.Context, templateID int64) ([]Exercise, error)
 	GetTemplateMaxOrderIndex(ctx context.Context, templateID int64) (int, error)
+	UpdateTemplate(ctx context.Context, templateID int64, name, description string) (Template, error)
+	DeleteTemplate(ctx context.Context, templateID int64) error
 }
